@@ -22,6 +22,7 @@ var express = require('express'),
     errorhandler = require('errorhandler'),
     bluemix = require('./config/bluemix'),
     watson = require('watson-developer-cloud'),
+    // watson = require('ibm-watson'),
     Conversation = require('watson-developer-cloud/conversation/v1'),
     path = require('path'),
     fs = require('fs'),
@@ -67,32 +68,26 @@ else console.log ("Using workspace_id="+workspace_id);
 console.log ("Final service data "+JSON.stringify(vcapServices));
 
 // -------------------------------- speech_to_text ---------------------------------
-var stt_credentials = {
-  version: 'v1',
-  url: 'https://stream.watsonplatform.net/speech-to-text/api',
-  username: vcapServices.speech_to_text[0].credentials.username,
-  password: vcapServices.speech_to_text[0].credentials.password
-};
-var authorization = watson.authorization(stt_credentials);
+const { IamTokenManager } = require('ibm-watson/auth');
+const serviceUrl = vcapServices.speech_to_text[0].credentials.url;
 
-// Get token from Watson using your credentials
-app.get('/token', function(req, res) {
-  console.log ("Getting a token with credentials "+JSON.stringify(stt_credentials));
-  authorization.getToken({url: stt_credentials.url}, function(err, token) {
-    if (err) {
-      console.log('getToken error:', err);
-      res.status(err.code);
-      var err_text = 'Failed to connect to IBM Watson Speech-to_Text service - check your internet connection.\n'+err;
-      return res.status(500).json({
-        'output': {
-          'text': err_text
-          }}); // the converstion service returned an error
-    }
-    console.log ('getToken returns: '+JSON.stringify(token));
-    res.send(token);
-  });
+const tokenManager = new IamTokenManager({
+  apikey: vcapServices.speech_to_text[0].credentials.apikey
 });
 
+
+// Get a token using your credentials
+app.get('/token', async (req, res, next) => {
+  try {
+    const accessToken = await tokenManager.getToken();
+    res.json({
+      accessToken,
+      serviceUrl,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // -------------------------------- Conversation ---------------------------------
 
