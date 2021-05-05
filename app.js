@@ -22,7 +22,6 @@ var express = require('express'),
     errorhandler = require('errorhandler'),
     bluemix = require('./config/bluemix'),
     watson = require('watson-developer-cloud'),
-    // watson = require('ibm-watson'),
     Conversation = require('watson-developer-cloud/conversation/v1'),
     path = require('path'),
     fs = require('fs'),
@@ -42,8 +41,9 @@ if (!process.env.VCAP_SERVICES) {
 // and a user variable named VCAP_SERVICES
 // When running locally we will read config from 'vcap-local.json'
 var vcapServices = process.env.VCAP_SERVICES;
-if (!vcapServices) {
-  console.log ("No VCAP_SERVICES variable so create empty one")
+//if (!vcapServices) {
+if (true) {
+    console.log ("Ignoring VCAP_SERVICES variable so create empty one")
   vcapServices = {};
 } else {
   vcapServices = JSON.parse(vcapServices);
@@ -78,13 +78,18 @@ const tokenManager = new IamTokenManager({
 
 // Get a token using your credentials
 app.get('/token', async (req, res, next) => {
+  console.log ("fetching STT token")
   try {
     const accessToken = await tokenManager.getToken();
+    //const accessToken = await tokenManager.getAuthHeader();
+    console.log("accessToken:", accessToken);
+    console.log("serviceUrl:", serviceUrl);
     res.json({
       accessToken,
       serviceUrl,
     });
   } catch (err) {
+    console.log("Error fetching token", err);
     next(err);
   }
 });
@@ -92,19 +97,23 @@ app.get('/token', async (req, res, next) => {
 // -------------------------------- Conversation ---------------------------------
 
 // Create the service wrapper - use credentials from environment file is running locally or from VCAP_SERVICES on Bluemix
+console.log('conv username:', vcapServices.conversation[0].credentials.username);
+console.log('conv password:', vcapServices.conversation[0].credentials.password);
 var conv_credentials = extend({
-  "url": "https://gateway.watsonplatform.net/conversation/api",
+  url: vcapServices.conversation[0].credentials.url,
   version: 'v1',
   username: vcapServices.conversation[0].credentials.username,
   password: vcapServices.conversation[0].credentials.password,
   version_date: Conversation.VERSION_DATE_2017_04_21
-}, bluemix.getServiceCreds('conversation'));
+}, {});
+//}, bluemix.getServiceCreds('conversation'));
+console.log('conv creds:', conv_credentials);
 var conversation = new Conversation(conv_credentials);
 
 // Endpoint to the conversation service that will be called from the client side
 app.post('/message', function(req, res) {
   // console.log ('Message sent to conversation service: '+JSON.stringify(req));
-  //console.log ('Message sent to conversation service: '+req.body);
+  console.log ('Message sent to conversation service: '+req.body);
   if (!workspace_id) {
     console.log ("we can't respond because no workspace_id has been set");
     return res.json({

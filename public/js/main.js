@@ -291,8 +291,8 @@ module.exports={
     {
        "url": "https://stream.watsonplatform.net/speech-to-text/api/v1/models/en-US_BroadbandModel",
        "rate": 16000,
-       "name": "en-GB_BroadbandModel",
-       "language": "en-GB",
+       "name": "en-US_BroadbandModel",
+       "language": "en-US",
        "description": "English" // "description": "UK English broadband model (16KHz)"
     }
    ]
@@ -491,7 +491,7 @@ $(document).ready(function() {
     }
 
     var viewContext = {
-      currentModel: 'en-GB_BroadbandModel',
+      currentModel: 'en-US_BroadbandModel',
       models: models,
       token: token,
       bufferSize: BUFFERSIZE
@@ -503,7 +503,7 @@ $(document).ready(function() {
     localStorage.setItem('models', JSON.stringify(models));
 
     // Set default current model
-    localStorage.setItem('currentModel', 'en-GB_BroadbandModel');
+    localStorage.setItem('currentModel', 'en-US_BroadbandModel');
     localStorage.setItem('sessionPermissions', 'true');
 
 
@@ -519,6 +519,7 @@ $(document).ready(function() {
   });
 
   console.log ("Initializing the conversation service");
+  loaded();
   conv_init();
 
 });
@@ -563,13 +564,15 @@ var initSocket = exports.initSocket = function(options, onopen, onlistening, onm
   var socket;
   var token = options.token;
   var model = options.model || localStorage.getItem('currentModel');
-  var message = options.message || {'action': 'start'};
+  var message = options.message || { 'action': 'start', 'smart_formatting': true};
+  var message2 = {'smart_formatting': true};
   var sessionPermissions = withDefault(options.sessionPermissions, JSON.parse(localStorage.getItem('sessionPermissions')));
   var sessionPermissionsQueryParam = sessionPermissions ? '0' : '1';
-  var url = options.serviceURI || 'wss://stream.watsonplatform.net/speech-to-text/api/v1/recognize?watson-token='
-    + token
+  var url = options.serviceURI || 'wss://api.eu-gb.speech-to-text.watson.cloud.ibm.com/instances/8e5fea00-103c-4586-8cc9-0d1d992ebbd4/v1/recognize'
+    + '?access_token=' + token
+    //+ 'smart_formatting=true'
     + '&model=' + model;
-  console.log('URL model', model);
+  console.log('URL', url);
   try {
     socket = new WebSocket(url);
   } catch(err) {
@@ -709,7 +712,9 @@ exports.createTokenGenerator = function() {
     var tokenRequest = new XMLHttpRequest();
     tokenRequest.open("GET", url, true);
     tokenRequest.onload = function(evt) {
-      var token = tokenRequest.responseText;
+      var resp = JSON.parse(tokenRequest.responseText);
+      token = resp.accessToken;
+      console.log("Token: ", token)
       callback(token);
     };
     tokenRequest.send();
@@ -732,7 +737,9 @@ exports.getToken = (function() {
     var tokenRequest = new XMLHttpRequest();
     tokenRequest.open("GET", url, true);
     tokenRequest.onload = function(evt) {
-      var token = tokenRequest.responseText;
+      var resp = JSON.parse(tokenRequest.responseText);
+      token = resp.accessToken;
+      console.log("Token: ", token)
       callback(token);
     };
     tokenRequest.send();
@@ -926,7 +933,7 @@ function TTS(textToSynthesize) {
 	var voice = getVoice();
 	if(voice == '')
 		return;
-	synthesizeRequest(textToSynthesize, voice);
+	//synthesizeRequest(textToSynthesize, voice);
 }
 
 function getTargetLanguageCode() {
@@ -950,7 +957,7 @@ function converse (textContent) {
   var payloadToWatson = {};
   payloadToWatson.input = { text: textContent };
   payloadToWatson.context = context;
-  console.log("meaasge payload: "+JSON.stringify(payloadToWatson));
+  console.log("message payload: "+JSON.stringify(payloadToWatson));
 
   // Built http request
   var http = new XMLHttpRequest();
@@ -963,6 +970,7 @@ function converse (textContent) {
       context = data.context; // store for future calls
       $('#response textarea').val(data.output.text);
       TTS(data.output.text);
+      sendMessage(data.output.text);
     }
   };
 
@@ -1416,7 +1424,7 @@ var playSample = (function() {
     xhr.responseType = 'blob';
     xhr.onload = function(e) {
       var blob = xhr.response;
-      var currentModel = localStorage.getItem('currentModel') || 'en-GB_BroadbandModel';
+      var currentModel = localStorage.getItem('currentModel') || 'en-US_BroadbandModel';
       var reader = new FileReader();
       var blobToText = new Blob([blob]).slice(0, 4);
       reader.readAsText(blobToText);
@@ -1600,7 +1608,7 @@ var initPlaySample = require('./playsample').initPlaySample;
 exports.initSelectModel = function(ctx) {
 
   function isDefault(model) {
-    return model === 'en-GB_BroadbandModel';
+    return model === 'en-US_BroadbandModel';
   }
 
   ctx.models.forEach(function(model) {
@@ -1617,7 +1625,7 @@ exports.initSelectModel = function(ctx) {
   });
 
   function onChooseTargetLanguageClick() {
-  	var currentModel = localStorage.getItem('currentModel') || 'en-GB_BroadbandModel';
+  	var currentModel = localStorage.getItem('currentModel') || 'en-US_BroadbandModel';
 	var list = $("#dropdownMenuTargetLanguage");
 	list.empty();
 	if(currentModel == 'en-US_BroadbandModel') {

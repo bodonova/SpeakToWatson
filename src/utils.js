@@ -53,7 +53,9 @@ exports.createTokenGenerator = function() {
     var tokenRequest = new XMLHttpRequest();
     tokenRequest.open("GET", url, true);
     tokenRequest.onload = function(evt) {
-      var token = tokenRequest.responseText;
+      var resp = JSON.parse(tokenRequest.responseText);
+      token = resp.accessToken;
+      console.log("Token: ", token)
       callback(token);
     };
     tokenRequest.send();
@@ -76,7 +78,9 @@ exports.getToken = (function() {
     var tokenRequest = new XMLHttpRequest();
     tokenRequest.open("GET", url, true);
     tokenRequest.onload = function(evt) {
-      var token = tokenRequest.responseText;
+      var resp = JSON.parse(tokenRequest.responseText);
+      token = resp.accessToken;
+      console.log("Token: ", token)
       callback(token);
     };
     tokenRequest.send();
